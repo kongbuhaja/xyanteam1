@@ -1,0 +1,13 @@
+<launch>
+  
+  <!-- ultrasonic node -->
+  <node pkg="xycar_ultrasonic" type="xycar_ultrasonic.py" name="xycar_ultrasonic" output="screen" />
+  <!-- motor node -->
+  <include file="$(find xycar_motor)/launch/xycar_motor.launch" />
+  <!-- lidar node -->
+  <include file="$(find xycar_lidar)/launch/lidar_noviewer.launch"/>
+
+  <!-- auto driver -->
+  <node name="auto_driver" pkg="my_xycar" type="drive.py" output="screen"/>
+
+</launch>
