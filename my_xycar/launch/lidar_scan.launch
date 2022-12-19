@@ -1,4 +1,0 @@
-<launch>
-	<include file="$(find xycar_lidar)/launch/lidar_noviewer.launch"/>
-	<node name="my_lidar" pkg="my_xycar" type="lidar_scan.py" output="screen"/>
-</launch>
