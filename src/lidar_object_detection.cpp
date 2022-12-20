@@ -65,7 +65,7 @@ private:
             j = (i + LIDAR_START_DEGREE) % LIDAR_MAX_DEGREE;
             if ((lidar_points[j] > LIDAR_MINIMUM_DISTANCE) && (lidar_points[j] < LIDAR_MAXIMUM_DISTANCE))
             {
-                x[j] = lidar_points[j];
+                x[i] = lidar_points[j];
             }
         }
 
