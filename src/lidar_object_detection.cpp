@@ -19,103 +19,98 @@ namespace team1
 #define LIDAR_MAX_DEGREE 505
 
 /* Required minimum number of dots for an object */
-#define LIDAR_MIN_SIZE 20
+#define LIDAR_OBJECT_MIN_SIZE 20
 
-typedef struct team1_lidar {
-    float distance;
-    float angle;
-} Team1_Lidar; 
+/* Required minimum distance of meters of an object */
+#define LIDAR_MINIMUM_DISTANCE 0.3f
 
+/* Required maximum distance of meters of an object */
+#define LIDAR_MAXIMUM_DISTANCE 1.f
+
+#define STEERING_TOTAL_NUMBER 40
 }
-class CAR
+
+using namespace team1;
+
+class ObstacleLidarDetector
 {
 private:
-    
     ros::NodeHandle nh;
     ros::Subscriber lidar_sub;
-#ifdef USE_MOTOR
-    ros::Publisher motor_pub;
-    ros::Subscriber motor_sub;
-    lane::xycar_motor msg_motor;
-#endif
     std::vector<float> lidar_points;
-    std::vector<float> lidar_intensities;
+    float* result_array;
 
+    ObstacleLidarDetector() {}
+
+    /* Callback triggered if topic sent from Lidar */
     void lidar_callback(sensor_msgs::LaserScan data)
     {
         lidar_points = data.ranges;
-
     }
-
-
     bool is_lidar_on()
     {
-        return (lidar_points.size() != 0);
+        return (bool)lidar_points.size();
     }
-
-    bool detect_object_lidar(float threshold = 0.3)
+    bool detect_object_lidar()
     {
-        // return false;
-        // int start = team1::LIDAR_START_DEGREE;
-        // int end = team1::LIDAR_END_DEGREE;
-        int start = LIDAR_START_DEGREE;
-        int end = LIDAR_END_DEGREE;
-        int length = lidar_points.size();
-        int front_size = length - start + end + 2;
-        std::vector<float> front;
-        int count = 20;
+        /*
+            data.ranges
+                index : angle
+                element : distance
+        */
+        /* counting cloud points in ranges */
+        int cnt = LIDAR_START_DEGREE - LIDAR_END_DEGREE;
+        float x[cnt] = {
+            0,
+        };
+        int number_of_adjacent = 0;
 
-#if (0)
-        for (int i = start; i < lidar_points.size(); i++)
+        int j;
+        for (int i = 0; i < cnt; ++i)
         {
-            front.push_back(lidar_points[i]);
-        }
-        for (int i = 0; i < end; i++)
-        {
-            front.push_back(lidar_points[i]);
-        }
-
-        for (int i = 0; i < front.size(); i++)
-        {
-            if (front[i] <= threshold)
+            j = (i + LIDAR_START_DEGREE) % LIDAR_MAX_DEGREE;
+            if (lidar_points[j] > LIDAR_MINIMUM_DISTANCE && lidar_points[j] < LIDAR_MAXIMUM_DISTANCE)
             {
-                count -= 1;
-                if (count <= 0)
-                {
-                    ROS_ERROR("lidar : [%d]", (start + i) % LIDAR_MAX_DEGREE);
-                    return true;
-                }
+                x[j] = lidar_points[j];
+            }
+        }
+
+        for (int i = 0; i < cnt; ++i)
+        {
+
+            if (x[i])
+            {
+                ++number_of_adjacent;
             }
             else
             {
-                count = 20;
+                if (number_of_adjacent > LIDAR_OBJECT_MIN_SIZE)
+                {
+                    // ROS_WARN("lidar : [%d]", (start + i) % LIDAR_MAX_DEGREE);
+                }
+
+                number_of_adjacent = 0;
             }
         }
 
-#else
-        for (int i = 0; i < lidar_points.size(); i++)
-        {
-            // if ((lidar_points[i] >= 0.3f) && (lidar_points[i] <= 1.0f))
-            if (lidar_points[i] >= 0.3f)
-            {
-                ROS_ERROR("lidar_points[%d][%f]", i, lidar_points[i]);
-            }
-        }
-#endif
-        memset(&lidar_points, 0x0, sizeof(lidar_points));
-        return false;
+
+        //////////////////////////////////////////
+        // 240 -> 42
+
+
+        //////////////////////////////////////////
+
+        return /* returns true if object exists, or else*/;
     }
 
 public:
-    CAR(const ros::NodeHandle nh_) : nh(nh_)
-    {
-        lidar_sub = nh.subscribe("/scan", 1, &CAR::lidar_callback, this);
-#ifdef USE_MOTOR
-        motor_pub = nh.advertise<lane::xycar_motor>("xycar_motor", 1);
-        motor_sub = nh.subscribe("go", &CAR::motor_callback, this);
-#endif
+    ObstacleLidarDetector(const ros::NodeHandle nh_) : nh(nh_) {
+        delete result_array;
+        result_array = new float[STEERING_TOTAL_NUMBER];
     }
-
+    ~ObstacleLidarDetector(){
+        delete result_array;
+    }
     void run()
     {
         if (is_lidar_on())
@@ -128,20 +123,28 @@ public:
             }
         }
     }
+
+    
+    // TODO 
+    float& getResultArray(){
+        return *result_array;
+    }
+
 };
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "auto_driver");
     ros::NodeHandle nh_;
-    CAR xycar(nh_);
+    ObstacleLidarDetector xycar(nh_);
     ros::Rate rate(30);
-    ROS_ERROR("Start Lidar");
+    ROS_WARN("Start Lidar");
     while (ros::ok())
     {
         xycar.run();
         ros::spinOnce();
         rate.sleep();
     }
+    
     return 0;
 }
