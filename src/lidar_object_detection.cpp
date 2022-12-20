@@ -3,6 +3,7 @@
 #include "sensor_msgs/LaserScan.h"
 #include "cmath"
 #include "algorithm"
+#include "std_msgs/Float32.h"
 
 namespace team1
 {
@@ -20,10 +21,16 @@ namespace team1
 /* Required minimum number of dots for an object */
 #define LIDAR_MIN_SIZE 20
 
+typedef struct team1_lidar {
+    float distance;
+    float angle;
+} Team1_Lidar; 
+
 }
 class CAR
 {
 private:
+    
     ros::NodeHandle nh;
     ros::Subscriber lidar_sub;
 #ifdef USE_MOTOR
@@ -36,41 +43,16 @@ private:
 
     void lidar_callback(sensor_msgs::LaserScan data)
     {
-        // ROS_ERROR("data.angle_min=[%f]",data.angle_min);
-        // ROS_ERROR("data.angle_max=[%f]",data.angle_max);
-
         lidar_points = data.ranges;
-        lidar_intensities = data.intensities;
-        // int s = sizeof(data.range)/sizeof(data.range[0])
-        // std::copy(data.range, data.range+s, lidar_points)
+
     }
 
-#ifdef USE_MOTOR
-    void motor_callback(const lane::xycar_motor &msg)
-    {
-        motor_publish(msg);
-    }
 
-    void motor_publish()
-    {
-        motor_pub.publish(msg_motor);
-    }
-#endif
     bool is_lidar_on()
     {
-        // ROS_ERROR("%d", lidar_points.size());
         return (lidar_points.size() != 0);
-        // TODO remove
-        // if(lidar_points.size()==0){return false;}
-        // return true;
     }
-#ifdef USE_MOTOR
-    void set_motor_control(const float angle, const float speed)
-    {
-        msg_motor.angle = angle;
-        msg_motor.speed = speed;
-    }
-#endif
+
     bool detect_object_lidar(float threshold = 0.3)
     {
         // return false;
