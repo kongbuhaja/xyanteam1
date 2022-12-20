@@ -1,5 +1,4 @@
 #include "ros/ros.h"
-// #include "lane/xycar_motor.h"
 #include "sensor_msgs/LaserScan.h"
 #include "cmath"
 #include "algorithm"
@@ -7,8 +6,6 @@
 
 namespace team1
 {
-// #define USE_MOTOR
-
 /* Start degree of Lidar(Left handed) */
 #define LIDAR_START_DEGREE 350
 
