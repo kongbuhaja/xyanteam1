@@ -19,7 +19,7 @@ namespace team1
 #define LIDAR_MAX_DEGREE 505
 
 /* Required minimum number of dots for an object */
-#define LIDAR_OBJECT_MIN_SIZE 20
+#define LIDAR_OBJECT_MIN_SIZE 6
 
 /* Required minimum distance of meters of an object */
 #define LIDAR_MINIMUM_DISTANCE 0.3f
@@ -40,8 +40,6 @@ private:
     std::vector<float> lidar_points;
     float* result_array;
 
-    ObstacleLidarDetector() {}
-
     /* Callback triggered if topic sent from Lidar */
     void lidar_callback(sensor_msgs::LaserScan data)
     {
@@ -49,7 +47,7 @@ private:
     }
     bool is_lidar_on()
     {
-        return (bool)lidar_points.size();
+        return lidar_points.size() != 0;
     }
     bool detect_object_lidar()
     {
@@ -60,53 +58,49 @@ private:
         */
         /* counting cloud points in ranges */
         int cnt = LIDAR_START_DEGREE - LIDAR_END_DEGREE;
-        float x[cnt] = {
-            0,
-        };
+        float x[LIDAR_START_DEGREE - LIDAR_END_DEGREE] = {0,};
         int number_of_adjacent = 0;
-
         int j;
-        for (int i = 0; i < cnt; ++i)
+
+        /* [!] Source code verification required [!] */
+        for (int i = 0; i < cnt; i++)
         {
             j = (i + LIDAR_START_DEGREE) % LIDAR_MAX_DEGREE;
-            if (lidar_points[j] > LIDAR_MINIMUM_DISTANCE && lidar_points[j] < LIDAR_MAXIMUM_DISTANCE)
+            if ((lidar_points[j] > LIDAR_MINIMUM_DISTANCE) && (lidar_points[j] < LIDAR_MAXIMUM_DISTANCE))
             {
                 x[j] = lidar_points[j];
             }
         }
 
-        for (int i = 0; i < cnt; ++i)
+        float distance_avg;
+        for (int i = 0, k = 0; (i+(LIDAR_OBJECT_MIN_SIZE-1)) < cnt; i += LIDAR_OBJECT_MIN_SIZE, k++)
         {
-
-            if (x[i])
+            if (x[i] && x[i+1] && x[i+2] && x[i+3] && x[i+4] && x[i+5])
             {
+                distance_avg = x[i];
+                distance_avg += x[i+1];
+                distance_avg += x[i+2];
+                distance_avg += x[i+3];
+                distance_avg += x[i+4];
+                distance_avg += x[i+5];
+                distance_avg = distance_avg / (float)LIDAR_OBJECT_MIN_SIZE;
+
+                result_array[k] = distance_avg;
                 ++number_of_adjacent;
             }
             else
             {
-                if (number_of_adjacent > LIDAR_OBJECT_MIN_SIZE)
-                {
-                    // ROS_WARN("lidar : [%d]", (start + i) % LIDAR_MAX_DEGREE);
-                }
-
-                number_of_adjacent = 0;
-            }
+                result_array[k] = 0.0f;
+            }            
         }
-
-
-        //////////////////////////////////////////
-        // 240 -> 42
-
-
-        //////////////////////////////////////////
-
-        return /* returns true if object exists, or else*/;
+        return number_of_adjacent != 0;
     }
 
 public:
-    ObstacleLidarDetector(const ros::NodeHandle nh_) : nh(nh_) {
-        delete result_array;
+    ObstacleLidarDetector(const ros::NodeHandle nh_) : nh(nh_)
+    {
         result_array = new float[STEERING_TOTAL_NUMBER];
+        lidar_sub = nh.subscribe("/scan", 1, &ObstacleLidarDetector::lidar_callback, this);
     }
     ~ObstacleLidarDetector(){
         delete result_array;
@@ -117,6 +111,7 @@ public:
         {
             if (detect_object_lidar())
             {
+                    /* ToDo */
             }
             else
             {
@@ -136,9 +131,10 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "auto_driver");
     ros::NodeHandle nh_;
+    ROS_WARN("Start Lidar");
     ObstacleLidarDetector xycar(nh_);
     ros::Rate rate(30);
-    ROS_WARN("Start Lidar");
+
     while (ros::ok())
     {
         xycar.run();
