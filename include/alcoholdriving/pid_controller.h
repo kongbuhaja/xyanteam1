@@ -1,13 +1,14 @@
 #ifndef PID_CONTROLLER_H_
 #define PID_CONTROLLER_H_
 
-namespace xycar
-{
+namespace alcoholdriving{
+  
   class PID final
   {
   public:
     // Construct a new PID object
     PID(float p_gain, float i_gain, float d_gain);
+
     // Calculate PID control
     float getControlOutput(int error);
 
@@ -19,5 +20,5 @@ namespace xycar
     float i_error_;
     float d_error_;
   };
-} // namespace xycar
+} // namespace alcoholdriving
 #endif // PID_CONTROLLER_H_
