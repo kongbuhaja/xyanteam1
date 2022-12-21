@@ -1,11 +1,4 @@
-/**
- * @file pid_controller.cpp
- * @author Jongrok Lee (lrrghdrh@naver.com)
- * @brief PID Controller Class source file
- * @version 0.2
- * @date 2022-11-27
- */
-#include "xyanteam1/pid_controller.h"
+#include "alcoholdriving/pid_controller.h"
 namespace xycar {
 PID::PID(float p_gain, float i_gain, float d_gain)
     : p_gain_(p_gain), i_gain_(i_gain), d_gain_(d_gain) {

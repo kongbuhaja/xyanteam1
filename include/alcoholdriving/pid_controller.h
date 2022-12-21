@@ -1,10 +1,3 @@
-/**
- * @file pid_controller.h
- * @author Jongrok Lee (lrrghdrh@naver.com)
- * @brief PID Controller Class header file
- * @version 0.2
- * @date 2022-11-27
- */
 #ifndef PID_CONTROLLER_H_
 #define PID_CONTROLLER_H_
 
