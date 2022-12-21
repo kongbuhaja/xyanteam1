@@ -1,10 +1,5 @@
 #include "ros/ros.h"
-#include "opencv2/opencv.hpp"
-#include "cv_bridge/cv_bridge.h"
 #include "iostream"
-#include "random"
-#include "std_msgs/String.h"
-#include "sensor_msgs/Image.h"
 #include "alcoholdriving/motor.h"
 #include "alcoholdriving/pid_controller.h"
 
@@ -87,6 +82,7 @@ private:
     ros::NodeHandle nh_;
     std::unique_ptr<alcoholdriving::Motor> motor_ptr_;
     std::unique_ptr<alcoholdriving::PID> pid_ptr_;
+    std::unique_ptr<alcoholdriving::Vision> vision_ptr_;
 
     inline int speed_control(float angle)
     {

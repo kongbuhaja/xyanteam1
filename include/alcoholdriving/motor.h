@@ -12,6 +12,8 @@ namespace alcoholdriving
         Motor(ros::NodeHandle &nh, const float initial_speed) : nh_(nh)
         {
             motor_pub_ = nh_.advertise<lane::xycar_motor>("xycar_motor", 1);
+
+            /* TODO Fix main */
             motor_sub_ = nh_.subscribe("go", &Main::motor_callback, this);
             msg_motor_.speed = initial_speed;
         }
