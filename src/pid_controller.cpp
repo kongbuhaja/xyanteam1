@@ -1,12 +1,5 @@
-/**
- * @file pid_controller.cpp
- * @author Jongrok Lee (lrrghdrh@naver.com)
- * @brief PID Controller Class source file
- * @version 0.2
- * @date 2022-11-27
- */
-#include "xyanteam1/pid_controller.h"
-namespace xycar {
+#include "alcoholdriving/pid_controller.h"
+namespace alcoholdriving {
 PID::PID(float p_gain, float i_gain, float d_gain)
     : p_gain_(p_gain), i_gain_(i_gain), d_gain_(d_gain) {
   p_error_ = 0.0f;
@@ -14,11 +7,11 @@ PID::PID(float p_gain, float i_gain, float d_gain)
   d_error_ = 0.0f;
 }
 
-float PID::getControlOutput(int error) {
+float PID::getControlOutput(int error, bool pid=true) {
   float float_type_error = (float)error;
   d_error_ = float_type_error - p_error_;
   p_error_ = float_type_error;
   i_error_ += float_type_error;
-  return p_gain_ * p_error_ + i_gain_ * i_error_ + d_gain_ * d_error_;
+  return p_gain_ * p_error_ + (pid ? (i_gain_ * i_error_) : 0) + d_gain_ * d_error_;
 }
-}  // namespace xycar
+}  // namespace alcoholdriving
