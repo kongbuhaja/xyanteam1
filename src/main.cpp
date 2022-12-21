@@ -11,30 +11,19 @@
 
 #define MIN_ERROR_IGNORABLE -1
 #define MAX_ERROR_IGNORABLE 1
+#define MAIN_DEBUG true
 
 class Main
 {
-private:
-    int argc_;
-    char **argv_;
-    bool debug_;
-    float error_;
-
-    lane::xycar_motor msg_motor_;
-    ros::NodeHandle nh_;
-    ros::Publisher motor_pub_;
-    ros::Subscriber motor_sub_;
-
 public:
     Main(int argc, char **argv, bool debug = false)
         : argc_(argc), argv_(argv), debug_(debug)
     {
         ros::init(argc_, argv_, "team1/main");
 
-        motor_pub = nh.advertise<lane::xycar_motor>("xycar_motor", 1);
-        motor_sub = nh.subscribe("go", &Main::motor_callback, this);
-
         nh_ = ros::NodeHandle();
+        motor_pub = nh_.advertise<lane::xycar_motor>("xycar_motor", 1);
+        motor_sub = nh_.subscribe("go", &Main::motor_callback, this);
     }
     ~Main()
     {
@@ -47,7 +36,7 @@ public:
         while (ros::ok())
         {
             // TODO : Vision
-
+            
             // TODO : LiDAR
 
             // TOBE : IMU
@@ -89,9 +78,20 @@ public:
         msg_motor_.angle = angle;
         msg_motor_.speed = speed;
     }
+
+private:
+    int argc_;
+    char **argv_;
+    bool debug_;
+    float error_;
+
+    lane::xycar_motor msg_motor_;
+    ros::NodeHandle nh_;
+    ros::Publisher motor_pub_;
+    ros::Subscriber motor_sub_;
 };
 
 int main(int argc, char **argv)
 {
-    return Main(argc, argv, true).run();
+    return Main(argc, argv, /*debug=*/MAIN_DEBUG_MODE).run();
 }
