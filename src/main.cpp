@@ -1,5 +1,10 @@
 #include "ros/ros.h"
+#include "opencv2/opencv.hpp"
+#include "cv_bridge/cv_bridge.h"
 #include "iostream"
+#include "random"
+#include "std_msgs/String.h"
+#include "sensor_msgs/Image.h"
 #include "alcoholdriving/motor.h"
 #include "alcoholdriving/pid_controller.h"
 
@@ -50,7 +55,7 @@ public:
             //                        std::min(pid_ptr_->getControlOutput(error, ~(error_ > MIN_ERROR_IGNORABLE && error_ < MAX_ERROR_IGNORABLE)),
             //                                 (float)kXycarSteeringAngleLimit));
             float angle = std::max(-(float)kXycarSteeringAngleLimit,
-                                   std::min(pid_ptr_->getControlOutput(error),
+                                   std::min(pid_ptr_->getControlOutput(error_),
                                             (float)kXycarSteeringAngleLimit));
             motor_.set_motor_control(
                 /* angle */ angle,
