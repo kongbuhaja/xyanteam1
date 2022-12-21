@@ -1,5 +1,3 @@
-#include <cmath>
-
 #include "ros/ros.h"
 #include "opencv2/opencv.hpp"
 #include "cv_bridge/cv_bridge.h"
@@ -7,7 +5,7 @@
 #include "random"
 #include "std_msgs/String.h"
 #include "sensor_msgs/Image.h"
-#include "lane/xycar_motor.h"
+#include "alcoholdriving/motor.h"
 
 #define MIN_ERROR_IGNORABLE -1
 #define MAX_ERROR_IGNORABLE 1
@@ -20,10 +18,8 @@ public:
         : argc_(argc), argv_(argv), debug_(debug)
     {
         ros::init(argc_, argv_, "team1/main");
-
         nh_ = ros::NodeHandle();
-        motor_pub = nh_.advertise<lane::xycar_motor>("xycar_motor", 1);
-        motor_sub = nh_.subscribe("go", &Main::motor_callback, this);
+        motor_ptr_ = new Motor();
     }
     ~Main()
     {
@@ -36,7 +32,7 @@ public:
         while (ros::ok())
         {
             // TODO : Vision
-            
+
             // TODO : LiDAR
 
             // TOBE : IMU
@@ -45,7 +41,7 @@ public:
             if (error_ > MIN_ERROR_IGNORABLE && error_ < MAX_ERROR_IGNORABLE)
             {
                 /* TODO */
-                set_motor_control(
+                motor_.set_motor_control(
                     /* angle */ 0,
                     /* speed */ 0);
             }
@@ -54,30 +50,18 @@ public:
             else
             {
                 /* TODO */
-                set_motor_control(
+                motor_.set_motor_control(
                     /* angle */ 0,
                     /* speed */ 0);
             }
 
             // Motor and steering control
-            motor_pub.publish(msg_motor_);
+            motor_.motor_publish();
         }
 
         return 0;
     }
-    inline void motor_callback(const lane::xycar_motor &msg)
-    {
-        motor_publish(msg);
-    }
-    inline void motor_publish()
-    {
-        motor_pub.publish(msg_motor_);
-    }
-    inline void set_motor_control(const float angle, const float speed)
-    {
-        msg_motor_.angle = angle;
-        msg_motor_.speed = speed;
-    }
+    
 
 private:
     int argc_;
@@ -85,10 +69,9 @@ private:
     bool debug_;
     float error_;
 
-    lane::xycar_motor msg_motor_;
     ros::NodeHandle nh_;
-    ros::Publisher motor_pub_;
-    ros::Subscriber motor_sub_;
+    std::unique_ptr<Motor> motor_ptr_;
+
 };
 
 int main(int argc, char **argv)
