@@ -12,12 +12,12 @@
 #define high_threshold 70
 #define slope_threshold 10
 #define offset 380
-#define roi_height 20
+#define gap 20
 #define width 640
 #define height 480
 #define rho 1
 #define theta PI/180
-#define limit_slope 10000
+#define limit_slope 10
 #define images_size 30
 #define ma_size 50
 
@@ -56,7 +56,6 @@ public:
 
 class Line_Detector{
 private:
-    int gap;
     ros::NodeHandle nh;
     ros::Subscriber cam_sub;
     cv::Mat image;
@@ -95,44 +94,47 @@ public:
     void binarization(const cv::Mat &src, cv::Mat &gray){
         cv::Mat blur;
         cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);
-        gray = gray + (gray - 128) * 1.0;
+        cv::Scalar mean = cv::mean(gray);
+        
+        //gray = gray + (gray - mean[0]) * 6.0;
         //cv::GaussianBlur(gray,blur, cv::Size(3,3), 0);
-        //cv::threshold(gray, gray, 110, 255, cv::THRESH_BINARY_INV);
+        cv::threshold(gray, gray, 180, 255, cv::THRESH_BINARY_INV);
     }
 
     int hough(const cv::Mat &gray, cv::Mat &dst){
         int lpos, rpos;
-        cv::Mat edge_img, roi, roi_th;
+        cv::Mat edge_img, roi, roi_th, canny;
         std::vector<cv::Vec4i> lines, left_lines, right_lines;
         
-        roi = gray(cv::Rect(0, offset, width, roi_height));
-        cv::Canny(roi, roi_th, low_threshold, high_threshold);
         
-        cv::HoughLinesP(roi_th, lines, rho, theta, 30, 30, 10);
-        
+        cv::Canny(gray, canny, low_threshold, high_threshold);
+        roi_th = canny(cv::Rect(0, offset, width, gap));
+        cv::HoughLinesP(roi_th, lines, rho, theta, 10, 10, 3);
+        dst=roi_th;
         if(lines.size()==0){
             return 320;
         }
         divide_lines(lines, left_lines, right_lines);
-        // ROS_ERROR("3");
+    
         std::vector<float> left = get_line_pos(left_lines, true);
         std::vector<float> right = get_line_pos(right_lines, false);
         float mpos = (left[0] + right[0]) * 0.5;
-
-        // if(left[1]==right[1])
-        //     mpos=int((left[0]+right[0])/2);
-        // else{
-        //     mpos = (-(left[2]-right[2])/(left[1]-right[1]));
-        //     if(mpos>width)
-        //         mpos=width-1;
-        //     else if(mpos<0)
-        //         mpos=0;
-        // }
+        std::cout<<left[0]<<" "<<right[0]<<" ";
+        return int(mpos);
+        if(left[1]==right[1])
+            mpos=int((left[0]+right[0])/2);
+        else{
+            mpos = (-(left[2]-right[2])/(left[1]-right[1]));
+            if(mpos>width)
+                mpos=width-1;
+            else if(mpos<0)
+                mpos=0;
+        }
 
         ma.add_sample(mpos);
-        dst=gray;
+        
         float wmm=ma.get_wmm();
-        return (wmm - width * 0.5);
+        return int(wmm - width * 0.5);
     }
 
     void divide_lines(const std::vector<cv::Vec4i> &lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines){
@@ -141,18 +143,19 @@ public:
         float slope;
 
         for(int i=0; i<lines.size(); i++){
-            if((lines[i][2] - lines[i][0])==0){slope = limit_slope;}
+            if((lines[i][2] - lines[i][0])==0){slope = 0.0;}
             else{slope = float(lines[i][3] - lines[i][1]) / float(lines[i][2] - lines[i][0]);}
 
             if((slope > -slope_threshold) && (slope < slope_threshold)){
                 slopes.push_back(slope);
                 new_lines.push_back(lines[i]);
+                std::cout << "slope :" <<slope <<std::endl;
             }
         }
 
         for(int i=0; i<slopes.size(); i++){
-            if((slopes[i] < 0) && (new_lines[i][2] < width/2 - 90)) {left_lines.push_back(new_lines[i]);}
-            else if((slopes[i]) > 0 && (new_lines[i][0] < width/2 + 90)) {right_lines.push_back(new_lines[i]);}
+            if((slopes[i] < 0) && (new_lines[i][2] < width/2)) {left_lines.push_back(new_lines[i]);}
+            else if((slopes[i]) > 0 && (new_lines[i][0] < width/2)) {right_lines.push_back(new_lines[i]);}
         }
     }
 
@@ -171,6 +174,7 @@ public:
             // float x2 = (height/2 -b) / float(m);
         }
         std::vector<float> result={float(pos),m,b};
+        std::cout<<"m:"<<m<<" pos: "<<pos<<std::endl;
         return result;
     }
 
@@ -195,13 +199,14 @@ public:
         b = y_avg - m * x_avg;
     }
 
-    float run(){
-        cv::Mat dst, th_img;
+    int run(cv::Mat &output_show){
+        cv::Mat dst, th_img, result;
         int cte=90;
         
         preprocessing(image, dst);
         binarization(dst, th_img);
-        cte=hough(th_img, dst);
+        cte=hough(th_img, result);
+        output_show=result;
         return cte;
     }
 
@@ -215,15 +220,24 @@ public:
 int main(int argc, char **argv){
     ros::init(argc, argv, "line_detector");
     ros::NodeHandle nh_;
+    int error;
 
     ros::Rate rate(30);
     Line_Detector line_detector(nh_);
-
+    cv::Mat output_show;
     while(ros::ok()){
         ros::spinOnce();
         if(line_detector.check()==1)
             continue;
-        line_detector.run();
+        error=line_detector.run(output_show);
+        cv::cvtColor(output_show, output_show, cv::COLOR_GRAY2BGR);
+        //cv::circle(output_show, cv::Point(error+320, 0), 2, cv::Scalar(255,255,255), 3);
+        cv::imshow("output_show", output_show);
+        std::cout<<error<<std::endl;
+        if(cv::waitKey(10) == 27){
+            break;
+        }        
     }
+    cv::destroyAllWindows();
     return 0;
 }
