@@ -1,8 +1,9 @@
 #ifndef PID_CONTROLLER_H_
 #define PID_CONTROLLER_H_
 
-namespace alcoholdriving{
-  
+namespace alcoholdriving
+{
+
   class PID final
   {
   public:
@@ -10,7 +11,7 @@ namespace alcoholdriving{
     PID(float p_gain, float i_gain, float d_gain);
 
     // Calculate PID control
-    float getControlOutput(int error);
+    float getControlOutput(int error, bool pd = false);
 
   private:
     const float p_gain_;
