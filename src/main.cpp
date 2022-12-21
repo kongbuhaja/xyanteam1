@@ -26,7 +26,8 @@ private:
     ros::Subscriber motor_sub_;
 
 public:
-    Main(int argc, char **argv, bool debug = false) : argc_(argc), argv_(argv), debug_(debug)
+    Main(int argc, char **argv, bool debug = false)
+        : argc_(argc), argv_(argv), debug_(debug)
     {
         ros::init(argc_, argv_, "team1/main");
 

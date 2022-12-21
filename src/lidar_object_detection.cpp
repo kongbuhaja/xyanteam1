@@ -60,7 +60,7 @@ private:
         */
         /* counting cloud points in ranges */
         int cnt = LIDAR_START_DEGREE - LIDAR_END_DEGREE;
-        float x[cnt] = {
+        float* x = new float[cnt]{
             0,
         };
         int number_of_adjacent = 0;
@@ -95,7 +95,7 @@ private:
 
 
         //////////////////////////////////////////
-        // 240 -> 42
+        // 240 -> 40
 
 
         //////////////////////////////////////////

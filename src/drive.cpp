@@ -69,9 +69,8 @@ private:
         int front_size = length - start + end + 2;
         std::vector<float> front;
         int count = 20;
-        asdasd
 
-            for (int i = start; i < lidar_points.size(); i++)
+        for (int i = start; i < lidar_points.size(); i++)
         {
             front.push_back(lidar_points[i]);
         }
