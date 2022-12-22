@@ -3,6 +3,7 @@
 #include "cv_bridge/cv_bridge.h"
 #include "iostream"
 #include "random"
+#include "yaml-cpp/yaml.h"
 #include "std_msgs/String.h"
 #include "sensor_msgs/Image.h"
 #include "alcoholdriving/motor.h"
@@ -18,12 +19,13 @@ public:
     Main(int argc, char **argv)
         : argc_(argc), argv_(argv)
     {
-
-        ros::init(argc_, argv_, "team1/main");
+        
         nh_ = ros::NodeHandle();
 
-        /* NOTE : Make it sure that `config_path` is valid in .launch params. */
-        const YAML::Node &config = YAML::LoadFile(nh_.getParam("config_path", config_path));
+
+        std::string config_path;
+        nh_.getParam("config_path", config_path);
+        const YAML::Node &config = YAML::LoadFile(config_path);
         xycar_max_speed_ = config["XYCAR"]["MAX_SPEED"].as<float>();
         xycar_min_speed_ = config["XYCAR"]["MIN_SPEED"].as<float>();
         xycar_speed_control_threshold_ = config["XYCAR"]["SPEED_CONTROL_THRESHOLD"].as<float>();
@@ -61,12 +63,12 @@ public:
             float angle = std::max(-(float)kXycarSteeringAngleLimit,
                                    std::min(pid_ptr_->getControlOutput(error_),
                                             (float)kXycarSteeringAngleLimit));
-            motor_.set_motor_control(
+            motor_ptr_->set_motor_control(
                 /* angle */ angle,
                 /* speed */ speed_control(angle));
 
             // Motor and steering control
-            motor_.motor_publish();
+            motor_ptr_->motor_publish();
         }
 
         return 0;
@@ -89,19 +91,25 @@ private:
     float xycar_initial_speed_;
 
     ros::NodeHandle nh_;
-    std::unique_ptr<alcoholdriving::Motor> motor_ptr_;
-    std::unique_ptr<alcoholdriving::PID> pid_ptr_;
-    std::unique_ptr<alcoholdriving::LineDetector> line_detector_ptr_;
+    // std::unique_ptr<alcoholdriving::Motor> motor_ptr_;
+    // std::unique_ptr<alcoholdriving::PID> pid_ptr_;
+    // std::unique_ptr<alcoholdriving::LineDetector> line_detector_ptr_;
+
+    alcoholdriving::Motor* motor_ptr_;
+    alcoholdriving::PID* pid_ptr_;
+    alcoholdriving::LineDetector* line_detector_ptr_;
+
 
     inline int speed_control(float angle)
     {
         // decelerate if the angle is wide enough,
         // else accelerate.
-        return std::abs(angle) > xycar_speed_control_threshold_ ? std::max(motor_.getSpeed() - deceleration_step_, xycar_min_speed_) : std::min(motor_.getSpeed() + acceleration_step_, xycar_max_speed_);
+        return std::abs(angle) > xycar_speed_control_threshold_ ? std::max(motor_ptr_->getSpeed() - deceleration_step_, xycar_min_speed_) : std::min(motor_ptr_->getSpeed() + acceleration_step_, xycar_max_speed_);
     }
 };
 
 int main(int argc, char **argv)
 {
+    ros::init(argc, argv, "team1/main");
     return Main(argc, argv).run();
 }
