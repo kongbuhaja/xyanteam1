@@ -30,7 +30,6 @@ namespace alcoholdriving
     public:
         LineDetector(ros::NodeHandle nh);
         ~LineDetector();
-        float getError();
 
     private:
         cv::Mat image;
@@ -39,17 +38,19 @@ namespace alcoholdriving
 
         void preprocessing(const cv::Mat &img, cv::Mat &dst);
 
-        void binarization(const cv::Mat &src, cv::Mat &gray);
+        void histStretching(cv::Mat &img);
 
-        int hough(const cv::Mat &gray, cv::Mat &dst);
+        void binarization(const cv::Mat &src, cv::Mat &dst);
+
+        float hough(const cv::Mat &gray);
 
         void divide_lines(const std::vector<cv::Vec4i> &lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines);
 
-        std::vector<float> get_line_pos(std::vector<cv::Vec4i> &lines, bool left);
+        void get_line_pos(std::vector<cv::Vec4i> &lines, bool left);
 
         void get_line_params(std::vector<cv::Vec4i> &lines, float &m, float &b);
 
-        int run(cv::Mat &src, cv::Mat &output_show);
+        float run();
 
         bool check();
     };
@@ -66,7 +67,6 @@ namespace alcoholdriving
         float get_mm();
         float get_wmm();
     };
-
 }
 
 #endif

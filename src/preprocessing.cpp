@@ -25,61 +25,68 @@ alcoholdriving::LineDetector::~LineDetector()
 
 void alcoholdriving::LineDetector::preprocessing(const cv::Mat &img, cv::Mat &dst)
 {
-    // load image
-    cv::Mat undistorted_img, blur;
-    cv::undistort(img, dst, cameraMatrix, distCoeffs);
+    cv::Mat undistorted_img; 
+    cv::undistort(img, undistorted_img, cameraMatrix, distCoeffs);
+    cv::cvtColor(undistorted_img, undistorted_img, cv::COLOR_BGR2GRAY);
+    dst = undistorted_img(cv::Rect(0, offset, width, gap));
 }
 
-void alcoholdriving::LineDetector::binarization(const cv::Mat &src, cv::Mat &gray)
-{
-    cv::Mat blur;
-    cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);
-    cv::Scalar mean = cv::mean(gray);
+void alcoholdriving::LineDetector::histStretching(cv::Mat &img){
+    int gmin, gmax;
+        gmin = img.at<uchar>(0,0);
+        gmax = gmin;
+        for(int y=0; y<img.rows; y++){
+            for(int x=0; x<img.cols; x++){
+                int value = img.at<uchar>(y,x);
+                if(value<gmin) gmin=value;
+                else if(value>gmax) gmax=value;
+            }
+        }
+        for(int y=0; y<img.rows; y++){
+            for(int x=0; x<img.cols; x++){
+                img.at<uchar>(y,x) = (img.at<uchar>(y,x) - gmin)*255 / (gmax - gmin);
+            }
+        }
+}
 
+void alcoholdriving::LineDetector::binarization(const cv::Mat &src, cv::Mat &dst)
+{
+    cv::Mat th_img = src;
+    histStretching(th_img);
+    cv::threshold(th_img, th_img, cv::THRESH_BINARY);
+    dst = th_img;
     // gray = gray + (gray - mean[0]) * 6.0;
     // cv::GaussianBlur(gray,blur, cv::Size(3,3), 0);
-    cv::threshold(gray, gray, 180, 255, cv::THRESH_BINARY_INV);
 }
 
-int alcoholdriving::LineDetector::hough(const cv::Mat &gray, cv::Mat &dst)
+float alcoholdriving::LineDetector::hough(const cv::Mat &th_img)
 {
-    int lpos, rpos;
+    int lpos, rpos, mpos;
     cv::Mat edge_img, roi, roi_th, canny;
     std::vector<cv::Vec4i> lines, left_lines, right_lines;
+    
+    cv::Canny(th_img, canny, low_threshold, high_threshold);
+    roi_th = canny(cv::Rect(0, offset, width, gap));
+    cv::HoughLinesP(roi_th, lines, rho, theta, 10, 10, 3);
 
-    cv::Canny(gray, canny, LOW_THRESHOLD, HIGH_THRESHOLD);
-    roi_th = canny(cv::Rect(0, OFFSET, WIDTH, GAP));
-    cv::HoughLinesP(roi_th, lines, RHO, THETA, 10, 10, 3);
-    dst = roi_th;
-    if (lines.size() == 0)
-    {
-        return 320;
-    }
     divide_lines(lines, left_lines, right_lines);
-    std::cout << "LEFT LINES : " << toString(left_lines) << std::endl;
-    std::cout << "RIGHT LINES : " << toString(right_lines) << std::endl;
-
-    std::vector<float> left = get_line_pos(left_lines, true);
-    std::vector<float> right = get_line_pos(right_lines, false);
-
-    float mpos = (left[0] + right[0]) * 0.5;
-    std::cout << left[0] << " " << right[0] << " ";
-    return int(mpos);
-    if (left[1] == right[1])
-        mpos = int((left[0] + right[0]) / 2);
-    else
-    {
-        mpos = (-(left[2] - right[2]) / (left[1] - right[1]));
-        if (mpos > WIDTH)
-            mpos = WIDTH - 1;
-        else if (mpos < 0)
-            mpos = 0;
+    
+    get_line_pos(left_lines, true);
+    get_line_pos(right_lines, false);
+       
+    if(flines.first[1]==flines.second[1])
+        mpos=int((flines.first[0]+flines.second[0])/2);
+    else{
+        mpos = (-(flines.first[2]-flines.second[2])/(flines.first[1]-flines.second[1]));
+        if(mpos>=width)
+            mpos=width-1;
+        else if(mpos<0)
+            mpos=0;
     }
 
     ma.add_sample(mpos);
-
-    float wmm = ma.get_wmm();
-    return int(wmm - WIDTH * 0.5);
+        
+    return (ma.get_wmm() - width * 0.5)/(width*2);
 }
 
 void alcoholdriving::LineDetector::divide_lines(const std::vector<cv::Vec4i> &lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines)
@@ -87,66 +94,44 @@ void alcoholdriving::LineDetector::divide_lines(const std::vector<cv::Vec4i> &li
     std::vector<float> slopes;
     std::vector<cv::Vec4i> new_lines;
     float slope;
+        
+    if(lines.size()==0){
+        left_lines = {};
+        right_lines = {};
+        return;
+    }
 
-    for (int i = 0; i < lines.size(); i++)
-    {
-        if ((lines[i][2] - lines[i][0]) == 0)
-        {
-            slope = 0.0;
-        }
-        else
-        {
-            slope = float(lines[i][3] - lines[i][1]) / float(lines[i][2] - lines[i][0]);
-        }
+    for(int i=0; i<lines.size(); i++){
+        if((lines[i][2] - lines[i][0])==0){slope = 0.0;}
+        else{slope = float(lines[i][3] - lines[i][1]) / float(lines[i][2] - lines[i][0]);}
 
-        if ((slope > -SLOPE_THRESHOLD) && (slope < SLOPE_THRESHOLD))
-        {
+        if((slope > -slope_threshold) && (slope < slope_threshold)){
             slopes.push_back(slope);
             new_lines.push_back(lines[i]);
-            std::cout << "slope :" << slope << std::endl;
         }
     }
 
-    for (int i = 0; i < slopes.size(); i++)
-    {
-        std::cout << "slopes[i] : " << slopes[i] << std::endl;
-        std::cout << "new_lines[i][2] : " << new_lines[i][2] << std::endl;
-        std::cout << "new_lines[i][0] : " << new_lines[i][0] << std::endl;
-        if ((slopes[i] < 0) && (new_lines[i][2] < WIDTH / 2))
-        {
-            left_lines.push_back(new_lines[i]);
-        }
-        else if ((slopes[i] > 0) && (new_lines[i][0] > WIDTH / 2))
-        {
-            right_lines.push_back(new_lines[i]);
-        }
+    for(int i=0; i<slopes.size(); i++){
+        if((slopes[i] < 0) && (new_lines[i][2] < width/2)) {left_lines.push_back(new_lines[i]);}
+        else if((slopes[i]) > 0 && (new_lines[i][0] > width/2)) {right_lines.push_back(new_lines[i]);}
     }
 }
 
-std::vector<float> alcoholdriving::LineDetector::get_line_pos(std::vector<cv::Vec4i> &lines, bool left)
+void alcoholdriving::LineDetector::get_line_pos(std::vector<cv::Vec4i> &lines, bool left)
 {
-    float &m = *new float();
-    float &b = *new float();
+    float m, b;
     get_line_params(lines, m, b);
     int pos;
-    if (m == 0 && b == 0)
-    {
-        std::cout << "OOPS! " << (left ? "LEFT" : "RIGHT") << "! m and b both are zero." << std::endl;
-        if (left)
-            pos = 0;
-        if (!left)
-            pos = WIDTH;
+    if(m==0 && b==0){
+        if(left) pos=0;
+        if(!left) pos=width;
     }
-    else
-    {
-        int y = GAP / 2;
-        pos = (y - b) / m;
-        // float x1 = (height -b) / float(m);
-        // float x2 = (height/2 -b) / float(m);
+    else{
+        int y = gap/2;
+        pos = (y-b) / m;
+        if(left) flines.first = {float(pos), m, b};
+        else flines.second = {float(pos), m, b};
     }
-    std::vector<float> result = {float(pos), m, b};
-    std::cout << "m:" << m << " pos: " << pos << std::endl;
-    return result;
 }
 
 void alcoholdriving::LineDetector::get_line_params(std::vector<cv::Vec4i> &lines, float &m, float &b)
@@ -157,8 +142,6 @@ void alcoholdriving::LineDetector::get_line_params(std::vector<cv::Vec4i> &lines
 
     if (lines.size() == 0)
     {
-        std::cout << "OOPS! Lines are empty." << std::endl;
-
         m = 0;
         b = 0;
         return;
@@ -176,34 +159,19 @@ void alcoholdriving::LineDetector::get_line_params(std::vector<cv::Vec4i> &lines
     b = y_avg - m * x_avg;
 }
 
-int alcoholdriving::LineDetector::run(cv::Mat &src, cv::Mat &output_show)
+float alcoholdriving::LineDetector::run()
 {
-    cv::Mat dst, th_img, result;
-    int cte = 90;
-
-    cv::cvtColor(src, image, cv::COLOR_RGB2BGR);
-
+    cv::Mat dst, th_img;
+    float error=0;
+       
     preprocessing(image, dst);
     binarization(dst, th_img);
-    cte = hough(th_img, result);
-    output_show = result;
-    return cte;
+    error = hough(th_img);
+
+    return error;
 }
 
 bool alcoholdriving::LineDetector::check()
 {
     return image.cols != 640;
-}
-
-float alcoholdriving::LineDetector::getError()
-{
-    cv::Mat output_show;
-    if (check() == 1)
-        return -1;
-    int error = run(output_show, output_show);
-    cv::cvtColor(output_show, output_show, cv::COLOR_GRAY2BGR);
-    // cv::circle(output_show, cv::Point(error+320, 0), 2, cv::Scalar(255,255,255), 3);
-    cv::imshow("output_show", output_show);
-    std::cout << error << std::endl;
-    return error;
 }
