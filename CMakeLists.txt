@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
 )
+find_package(yaml-cpp REQUIRED)
 find_package(OpenCV 4.5.5 REQUIRED PATHS ~/OpenCV4/install/lib/cmake/opencv4)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -118,14 +119,21 @@ INCLUDE_DIRS include
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+ include
   ${catkin_INCLUDE_DIRS}
+  ${YAML_CPP_INCLUDE_DIR}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/lane.cpp
 # )
+add_library(alcoholdriving
+	src/MovinAverage.cpp
+	src/lidar_object_detection.cpp
+	src/pid_controller.cpp
+	src/preprocessing.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -136,8 +144,8 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/lane_node.cpp)
-add_executable(drive src/drive.cpp)
-add_executable(hough_find src/hough_find.cpp)
+add_executable(drive src/main.cpp)
+#add_executable(hough_find src/hough_find.cpp)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -152,8 +160,11 @@ add_executable(hough_find src/hough_find.cpp)
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-target_link_libraries(drive ${catkin_LIBRARIES})
-target_link_libraries(hough_find ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(drive 
+	alcoholdriving
+	${YAML_CPP_LIBRARIES}
+	${catkin_LIBRARIES}
+)
 #############
 ## Install ##
 #############
@@ -165,7 +176,7 @@ target_link_libraries(hough_find ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 ## in contrast to setup.py, you can choose the destination
 # catkin_install_python(PROGRAMS
 #   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+#   DESTINATION ${CATK1IN_PACKAGE_BIN_DESTINATION}
 # )
 
 ## Mark executables for installation
