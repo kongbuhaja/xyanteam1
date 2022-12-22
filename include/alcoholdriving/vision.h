@@ -24,13 +24,44 @@ namespace alcoholdriving
 #define LIMIT_SLOPE 10
 #define IMAGES_SIZE 30
 #define MA_SIZE 50
-    
+
+    class LineDetector
+    {
+    public:
+        LineDetector(ros::NodeHandle nh);
+        ~LineDetector();
+
+    private:
+        cv::Mat image;
+        alcoholdriving::MovingAverage ma;
+        ros::NodeHandle nh_;
+        std::pair<std::vector<float>, std::vector<float>> flines;
+
+
+        void preprocessing(const cv::Mat &img, cv::Mat &dst);
+
+        void histStretching(cv::Mat &img);
+
+        void binarization(const cv::Mat &src, cv::Mat &dst);
+
+        float hough(const cv::Mat &gray);
+
+        void divide_lines(const std::vector<cv::Vec4i> &lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines);
+
+        void get_line_pos(std::vector<cv::Vec4i> &lines, bool left);
+
+        void get_line_params(std::vector<cv::Vec4i> &lines, float &m, float &b);
+
+        float run();
+
+        bool check();
+    };
     class MovingAverage
     {
     private:
         int samples;
         std::vector<float> data, weights;
-
+        
     public:
         MovingAverage();
         MovingAverage(const int n);
@@ -38,36 +69,6 @@ namespace alcoholdriving
         float get_mm();
         float get_wmm();
     };
-
-    class LineDetector
-    {
-    public:
-        LineDetector(ros::NodeHandle nh);
-        ~LineDetector();
-        float getError();
-
-    private:
-        cv::Mat image;
-        alcoholdriving::MovingAverage ma;
-        ros::NodeHandle nh_;
-
-        void preprocessing(const cv::Mat &img, cv::Mat &dst);
-
-        void binarization(const cv::Mat &src, cv::Mat &gray);
-
-        int hough(const cv::Mat &gray, cv::Mat &dst);
-
-        void divide_lines(const std::vector<cv::Vec4i> &lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines);
-
-        std::vector<float> get_line_pos(std::vector<cv::Vec4i> &lines, bool left);
-
-        void get_line_params(std::vector<cv::Vec4i> &lines, float &m, float &b);
-
-        int run(cv::Mat &src, cv::Mat &output_show);
-
-        bool check();
-    };
-
 }
 
 #endif
