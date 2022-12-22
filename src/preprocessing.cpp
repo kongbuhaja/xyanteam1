@@ -28,7 +28,7 @@ void alcoholdriving::LineDetector::preprocessing(const cv::Mat &img, cv::Mat &ds
     cv::Mat undistorted_img; 
     cv::undistort(img, undistorted_img, cameraMatrix, distCoeffs);
     cv::cvtColor(undistorted_img, undistorted_img, cv::COLOR_BGR2GRAY);
-    dst = undistorted_img(cv::Rect(0, offset, width, gap));
+    dst = undistorted_img(cv::Rect(0, OFFSET, WIDTH, GAP));
 }
 
 void alcoholdriving::LineDetector::histStretching(cv::Mat &img){
@@ -53,7 +53,7 @@ void alcoholdriving::LineDetector::binarization(const cv::Mat &src, cv::Mat &dst
 {
     cv::Mat th_img = src;
     histStretching(th_img);
-    cv::threshold(th_img, th_img, cv::THRESH_BINARY);
+    cv::threshold(th_img, th_img, 200, 255, cv::THRESH_BINARY);
     dst = th_img;
     // gray = gray + (gray - mean[0]) * 6.0;
     // cv::GaussianBlur(gray,blur, cv::Size(3,3), 0);
@@ -65,9 +65,9 @@ float alcoholdriving::LineDetector::hough(const cv::Mat &th_img)
     cv::Mat edge_img, roi, roi_th, canny;
     std::vector<cv::Vec4i> lines, left_lines, right_lines;
     
-    cv::Canny(th_img, canny, low_threshold, high_threshold);
-    roi_th = canny(cv::Rect(0, offset, width, gap));
-    cv::HoughLinesP(roi_th, lines, rho, theta, 10, 10, 3);
+    cv::Canny(th_img, canny, LOW_THRESHOLD, HIGH_THRESHOLD);
+    roi_th = canny(cv::Rect(0, OFFSET, WIDTH, GAP));
+    cv::HoughLinesP(roi_th, lines,RHO, THETA, 10, 10, 3);
 
     divide_lines(lines, left_lines, right_lines);
     
@@ -78,15 +78,15 @@ float alcoholdriving::LineDetector::hough(const cv::Mat &th_img)
         mpos=int((flines.first[0]+flines.second[0])/2);
     else{
         mpos = (-(flines.first[2]-flines.second[2])/(flines.first[1]-flines.second[1]));
-        if(mpos>=width)
-            mpos=width-1;
+        if(mpos>=WIDTH)
+            mpos=WIDTH-1;
         else if(mpos<0)
             mpos=0;
     }
 
     ma.add_sample(mpos);
         
-    return (ma.get_wmm() - width * 0.5)/(width*2);
+    return (ma.get_wmm() - WIDTH * 0.5)/(WIDTH*2);
 }
 
 void alcoholdriving::LineDetector::divide_lines(const std::vector<cv::Vec4i> &lines, std::vector<cv::Vec4i> &left_lines, std::vector<cv::Vec4i> &right_lines)
@@ -105,15 +105,15 @@ void alcoholdriving::LineDetector::divide_lines(const std::vector<cv::Vec4i> &li
         if((lines[i][2] - lines[i][0])==0){slope = 0.0;}
         else{slope = float(lines[i][3] - lines[i][1]) / float(lines[i][2] - lines[i][0]);}
 
-        if((slope > -slope_threshold) && (slope < slope_threshold)){
+        if((slope > -SLOPE_THRESHOLD) && (slope < SLOPE_THRESHOLD)){
             slopes.push_back(slope);
             new_lines.push_back(lines[i]);
         }
     }
 
     for(int i=0; i<slopes.size(); i++){
-        if((slopes[i] < 0) && (new_lines[i][2] < width/2)) {left_lines.push_back(new_lines[i]);}
-        else if((slopes[i]) > 0 && (new_lines[i][0] > width/2)) {right_lines.push_back(new_lines[i]);}
+        if((slopes[i] < 0) && (new_lines[i][2] < WIDTH/2)) {left_lines.push_back(new_lines[i]);}
+        else if((slopes[i]) > 0 && (new_lines[i][0] > WIDTH/2)) {right_lines.push_back(new_lines[i]);}
     }
 }
 
@@ -124,10 +124,10 @@ void alcoholdriving::LineDetector::get_line_pos(std::vector<cv::Vec4i> &lines, b
     int pos;
     if(m==0 && b==0){
         if(left) pos=0;
-        if(!left) pos=width;
+        if(!left) pos=WIDTH;
     }
     else{
-        int y = gap/2;
+        int y = GAP/2;
         pos = (y-b) / m;
         if(left) flines.first = {float(pos), m, b};
         else flines.second = {float(pos), m, b};
