@@ -6,6 +6,7 @@
 #include <cmath>
 #include "std_msgs/String.h"
 #include "sensor_msgs/Image.h"
+#include "alcoholdriving/vision.h"
 
 #define PI M_PI
 #define low_threshold 60
@@ -25,45 +26,17 @@
 const cv::Mat cameraMatrix = (cv::Mat_<double>(3,3) << 422.037858, 0.000000, 245.895397, 0.000000, 435.589734, 163.625535, 0.000000, 0.000000, 1.000000);
 const cv::Mat distCoeffs = (cv::Mat_<double>(1,5) << -0.289296, 0.061035, 0.001786, 0.015238, 0.000000);
 
-class MovingAverage{
-private:
-    int samples;
-    std::vector<float> data, weights;
-public:
-    MovingAverage(){
-    }
-    MovingAverage(const int n): samples(n){
-        for(int i=1; i<n+1; i++){
-            weights.push_back(i);
-        }
-    }
-    void add_sample(const float new_samples){
-        if(data.size() ==samples)
-            data.erase(data.begin(),data.begin()+1);
-        data.push_back(new_samples);
-    }
-    float get_mm(){
-        return std::accumulate(data.begin(), data.end(), float(0));
-    }
-
-    float get_wmm(){
-        float s=0;
-        for(int i=0; i<data.size(); i++)
-            s += data[i] * weights[i];
-        return float(s) / std::accumulate(weights.begin(), weights.begin() + data.size(), float(0));
-    }
-};
 
 class Line_Detector{
 private:
     ros::NodeHandle nh;
     ros::Subscriber cam_sub;
     cv::Mat image;
-    MovingAverage ma;
+    alcoholdriving::MovingAverage ma;
 public:
     Line_Detector(const ros::NodeHandle &nh_): nh(nh_){
         cam_sub = nh.subscribe("/usb_cam/image_raw", 1, &Line_Detector::cam_callback, this);
-        ma = MovingAverage(ma_size);
+        ma = alcoholdriving::MovingAverage(ma_size);
     }
 
     void cam_callback(const sensor_msgs::Image &msg){
