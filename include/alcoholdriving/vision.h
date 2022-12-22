@@ -59,6 +59,7 @@ namespace alcoholdriving
     private:
         int samples;
         std::vector<float> data, weights;
+        std::pair<std::vector<float>, std::vector<float>> flines;
 
     public:
         MovingAverage();
