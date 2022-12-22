@@ -6,6 +6,7 @@
 #include "std_msgs/String.h"
 #include "sensor_msgs/Image.h"
 #include "alcoholdriving/motor.h"
+#include "alcoholdriving/vision.h"
 #include "alcoholdriving/pid_controller.h"
 
 #define MIN_ERROR_IGNORABLE -1
@@ -14,8 +15,8 @@
 class Main
 {
 public:
-    Main(int argc, char **argv, bool debug = false)
-        : argc_(argc), argv_(argv), debug_(debug)
+    Main(int argc, char **argv)
+        : argc_(argc), argv_(argv)
     {
 
         ros::init(argc_, argv_, "team1/main");
@@ -32,12 +33,14 @@ public:
         pid_ptr_ = new alcoholdriving::PID(config["PID"]["P_GAIN"].as<float>(),
                                            config["PID"]["I_GAIN"].as<float>(),
                                            config["PID"]["D_GAIN"].as<float>());
+        line_detector_ptr_ = new alcoholdriving::LineDetector(nh_);
     }
     ~Main()
     {
         // TODO : Destroy
         delete motor_ptr_;
         delete pid_ptr_;
+        delete line_detector_ptr_;
     }
 
     int run()
@@ -45,8 +48,9 @@ public:
 
         while (ros::ok())
         {
-            // TODO : Vision
-
+            // Vision proccessing
+            error_ = line_detector_ptr_-> getError();
+            
             // TODO : LiDAR
 
             // TOBE : IMU
@@ -74,7 +78,7 @@ private:
     int argc_;
     char **argv_;
     bool debug_;
-    float error_;
+    float error_;     
 
     // Xycar Device variables
     float xycar_max_speed_;
@@ -87,7 +91,7 @@ private:
     ros::NodeHandle nh_;
     std::unique_ptr<alcoholdriving::Motor> motor_ptr_;
     std::unique_ptr<alcoholdriving::PID> pid_ptr_;
-    std::unique_ptr<alcoholdriving::Vision> vision_ptr_;
+    std::unique_ptr<alcoholdriving::LineDetector> line_detector_ptr_;
 
     inline int speed_control(float angle)
     {
@@ -99,5 +103,5 @@ private:
 
 int main(int argc, char **argv)
 {
-    return Main(argc, argv, /*debug=*/MAIN_DEBUG_MODE).run();
+    return Main(argc, argv).run();
 }
