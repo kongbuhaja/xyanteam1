@@ -1,57 +1,52 @@
-#include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h"
-#include "cmath"
-#include "algorithm"
-#include "std_msgs/Float32.h"
-
-namespace team1
-{
-/* Start degree of Lidar(Left handed) */
-#define LIDAR_START_DEGREE 350
-
-/* End degree of Lidar(Right handed) */
-#define LIDAR_END_DEGREE 110
-
-/* Maxinum degree of Lidar (Mininmum is 0)*/
-#define LIDAR_MAX_DEGREE 505
-
-/* Required minimum number of dots for an object */
-#define LIDAR_OBJECT_MIN_SIZE 6
-
-/* Required minimum distance of meters of an object */
-#define LIDAR_MINIMUM_DISTANCE 0.3f
-
-/* Required maximum distance of meters of an object */
-#define LIDAR_MAXIMUM_DISTANCE 1.f
-
-#define STEERING_TOTAL_NUMBER 40
-}
+#include "alcoholdriving/lidar_object_detection.h"
 
 using namespace team1;
+//namespace alcoholdriving
+//{
+    ObstacleLidarDetector::ObstacleLidarDetector(const ros::NodeHandle nh_) : nh(nh_)
+    {
+        result_array = new float[STEERING_TOTAL_NUMBER];
+        lidar_sub = nh.subscribe("/scan", 1, &ObstacleLidarDetector::lidar_callback, this);
+    }
 
-class ObstacleLidarDetector
-{
-private:
-    ros::NodeHandle nh;
-    ros::Subscriber lidar_sub;
-    std::vector<float> lidar_points;
-    float* result_array;
+    ObstacleLidarDetector::~ObstacleLidarDetector()
+    {
+        delete result_array;
+    }
 
+    void ObstacleLidarDetector::run()
+    {
+        if (is_lidar_on())
+        {
+            if (detect_object_lidar())
+            {
+                    /* ToDo */
+            }
+            else
+            {
+            }
+        }
+    }
+    // TODO
+    float& ObstacleLidarDetector::getResultArray()
+    {
+        return *result_array;
+    }
     /* Callback triggered if topic sent from Lidar */
-    void lidar_callback(sensor_msgs::LaserScan data)
+    void ObstacleLidarDetector::lidar_callback(sensor_msgs::LaserScan data)
     {
         lidar_points = data.ranges;
     }
-    bool is_lidar_on()
+    bool ObstacleLidarDetector::is_lidar_on()
     {
         return lidar_points.size() != 0;
     }
-    bool detect_object_lidar()
+    bool ObstacleLidarDetector::detect_object_lidar()
     {
         /*
             data.ranges
-                index : angle
-                element : distance
+            index : angle
+            element : distance
         */
         /* counting cloud points in ranges */
         int cnt = LIDAR_START_DEGREE - LIDAR_END_DEGREE;
@@ -86,46 +81,16 @@ private:
 
                 result_array[k] = distance_avg;
                 ++number_of_adjacent;
+		ROS_ERROR("result_array[%d]=[%f]", k, result_array[k]);
             }
             else
             {
                 result_array[k] = 0.0f;
-            }            
+            }
         }
         return number_of_adjacent != 0;
     }
-
-public:
-    ObstacleLidarDetector(const ros::NodeHandle nh_) : nh(nh_)
-    {
-        result_array = new float[STEERING_TOTAL_NUMBER];
-        lidar_sub = nh.subscribe("/scan", 1, &ObstacleLidarDetector::lidar_callback, this);
-    }
-    ~ObstacleLidarDetector(){
-        delete result_array;
-    }
-    void run()
-    {
-        if (is_lidar_on())
-        {
-            if (detect_object_lidar())
-            {
-                    /* ToDo */
-            }
-            else
-            {
-            }
-        }
-    }
-
-    
-    // TODO 
-    float& getResultArray(){
-        return *result_array;
-    }
-
-};
-
+//}  // namespace alcoholdriving
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "auto_driver");
@@ -140,7 +105,6 @@ int main(int argc, char **argv)
         ros::spinOnce();
         rate.sleep();
     }
-    
+
     return 0;
 }
-
