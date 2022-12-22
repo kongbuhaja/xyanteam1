@@ -1,4 +1,3 @@
 <launch>
-
 	<node name="lane_detector" pkg="ocv" type="sliding_find"/>
 </launch>

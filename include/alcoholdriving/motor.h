@@ -14,16 +14,11 @@ namespace alcoholdriving
             motor_pub_ = nh_.advertise<lane::xycar_motor>("xycar_motor", 1);
 
             /* TODO Fix main */
-            motor_sub_ = nh_.subscribe("go", motor_callback, this);
             msg_motor_.speed = initial_speed;
         }
 
         ~Motor() {}
 
-        inline void motor_callback(const lane::xycar_motor &msg)
-        {
-            motor_publish(msg);
-        }
         inline void motor_publish()
         {
             motor_pub.publish(msg_motor_);
