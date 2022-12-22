@@ -1,28 +1,27 @@
 #include "alcoholdriving/vision.h"
 
-using namespace alcoholdriving;
+alcoholdriving::MovingAverage::MovingAverage() {}
 
-MovingAverage::MovingAverage() {}
 
-MovingAverage::MovingAverage(const int n) : samples(n)
+alcoholdriving::MovingAverage::MovingAverage(const int n) : samples(n)
 {
     for (int i = 1; i < n + 1; i++)
     {
         weights.push_back(i);
     }
 }
-void MovingAverage::add_sample(const float new_samples)
+void alcoholdriving::MovingAverage::add_sample(const float new_samples)
 {
     if (data.size() == samples)
         data.erase(data.begin(), data.begin() + 1);
     data.push_back(new_samples);
 }
-float MovingAverage::get_mm()
+float alcoholdriving::MovingAverage::get_mm()
 {
     return std::accumulate(data.begin(), data.end(), float(0));
 }
 
-float MovingAverage::get_wmm()
+float  alcoholdriving::MovingAverage::get_wmm()
 {
     float s = 0;
     for (int i = 0; i < data.size(); i++)

@@ -1,8 +1,8 @@
 #include "alcoholdriving/lidar_object_detection.h"
 
-using namespace team1;
-//namespace alcoholdriving
-//{
+namespace alcoholdriving
+{
+    
     ObstacleLidarDetector::ObstacleLidarDetector(const ros::NodeHandle nh_) : nh(nh_)
     {
         result_array = new float[STEERING_TOTAL_NUMBER];
@@ -28,9 +28,9 @@ using namespace team1;
         }
     }
     // TODO
-    float& ObstacleLidarDetector::getResultArray()
+    float* ObstacleLidarDetector::getResultArray()
     {
-        return *result_array;
+        return result_array;
     }
     /* Callback triggered if topic sent from Lidar */
     void ObstacleLidarDetector::lidar_callback(sensor_msgs::LaserScan data)
@@ -90,21 +90,5 @@ using namespace team1;
         }
         return number_of_adjacent != 0;
     }
-//}  // namespace alcoholdriving
-int main(int argc, char **argv)
-{
-    ros::init(argc, argv, "auto_driver");
-    ros::NodeHandle nh_;
-    ROS_WARN("Start Lidar");
-    ObstacleLidarDetector xycar(nh_);
-    ros::Rate rate(30);
+}  // namespace alcoholdriving
 
-    while (ros::ok())
-    {
-        xycar.run();
-        ros::spinOnce();
-        rate.sleep();
-    }
-
-    return 0;
-}

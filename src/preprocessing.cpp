@@ -8,19 +8,19 @@
 #include "sensor_msgs/Image.h"
 #include "alcoholdriving/vision.h"
 
-const std::string toString(const std::vector<cv::Vec4i> &v);
 
 const cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) << 422.037858, 0.000000, 245.895397, 0.000000, 435.589734, 163.625535, 0.000000, 0.000000, 1.000000);
 const cv::Mat distCoeffs = (cv::Mat_<double>(1, 5) << -0.289296, 0.061035, 0.001786, 0.015238, 0.000000);
 
 alcoholdriving::LineDetector::LineDetector(ros::NodeHandle nh) : nh_(nh)
 {
-    ma = MovingAverage(MA_SIZE);
+    ma = *new alcoholdriving::MovingAverage(MA_SIZE);
 }
 
 alcoholdriving::LineDetector::~LineDetector()
 {
     /* TODO Destroy Objects in LineDetector*/
+    //delete ma;
 }
 
 void alcoholdriving::LineDetector::preprocessing(const cv::Mat &img, cv::Mat &dst)
@@ -31,25 +31,7 @@ void alcoholdriving::LineDetector::preprocessing(const cv::Mat &img, cv::Mat &ds
     dst = undistorted_img(cv::Rect(0, OFFSET, WIDTH, GAP));
 }
 
-void alcoholdriving::LineDetector::histStretching(cv::Mat &img){
-    int gmin, gmax;
-        gmin = img.at<uchar>(0,0);
-        gmax = gmin;
-        for(int y=0; y<img.rows; y++){
-            for(int x=0; x<img.cols; x++){
-                int value = img.at<uchar>(y,x);
-                if(value<gmin) gmin=value;
-                else if(value>gmax) gmax=value;
-            }
-        }
-        for(int y=0; y<img.rows; y++){
-            for(int x=0; x<img.cols; x++){
-                img.at<uchar>(y,x) = (img.at<uchar>(y,x) - gmin)*255 / (gmax - gmin);
-            }
-        }
-}
-
-void alcoholdriving::LineDetector::binarization(const cv::Mat &src, cv::Mat &dst)
+void alcoholdriving::LineDetector::binarization(const cv::Mat &src, cv::Mat &gray)
 {
     cv::Mat th_img = src;
     histStretching(th_img);
@@ -57,11 +39,12 @@ void alcoholdriving::LineDetector::binarization(const cv::Mat &src, cv::Mat &dst
     dst = th_img;
     // gray = gray + (gray - mean[0]) * 6.0;
     // cv::GaussianBlur(gray,blur, cv::Size(3,3), 0);
+    cv::threshold(gray, gray, 180, 255, cv::THRESH_BINARY_INV);
 }
 
-float alcoholdriving::LineDetector::hough(const cv::Mat &th_img)
+int alcoholdriving::LineDetector::hough(const cv::Mat &gray, cv::Mat &dst)
 {
-    int lpos, rpos, mpos;
+    int lpos, rpos;
     cv::Mat edge_img, roi, roi_th, canny;
     std::vector<cv::Vec4i> lines, left_lines, right_lines;
     
@@ -94,12 +77,17 @@ void alcoholdriving::LineDetector::divide_lines(const std::vector<cv::Vec4i> &li
     std::vector<float> slopes;
     std::vector<cv::Vec4i> new_lines;
     float slope;
-        
-    if(lines.size()==0){
-        left_lines = {};
-        right_lines = {};
-        return;
-    }
+
+    for (int i = 0; i < lines.size(); i++)
+    {
+        if ((lines[i][2] - lines[i][0]) == 0)
+        {
+            slope = 0.0;
+        }
+        else
+        {
+            slope = float(lines[i][3] - lines[i][1]) / float(lines[i][2] - lines[i][0]);
+        }
 
     for(int i=0; i<lines.size(); i++){
         if((lines[i][2] - lines[i][0])==0){slope = 0.0;}
@@ -108,6 +96,7 @@ void alcoholdriving::LineDetector::divide_lines(const std::vector<cv::Vec4i> &li
         if((slope > -SLOPE_THRESHOLD) && (slope < SLOPE_THRESHOLD)){
             slopes.push_back(slope);
             new_lines.push_back(lines[i]);
+            std::cout << "slope :" << slope << std::endl;
         }
     }
 
@@ -117,9 +106,10 @@ void alcoholdriving::LineDetector::divide_lines(const std::vector<cv::Vec4i> &li
     }
 }
 
-void alcoholdriving::LineDetector::get_line_pos(std::vector<cv::Vec4i> &lines, bool left)
+std::vector<float> alcoholdriving::LineDetector::get_line_pos(std::vector<cv::Vec4i> &lines, bool left)
 {
-    float m, b;
+    float &m = *new float();
+    float &b = *new float();
     get_line_params(lines, m, b);
     int pos;
     if(m==0 && b==0){
@@ -132,6 +122,9 @@ void alcoholdriving::LineDetector::get_line_pos(std::vector<cv::Vec4i> &lines, b
         if(left) flines.first = {float(pos), m, b};
         else flines.second = {float(pos), m, b};
     }
+    std::vector<float> result = {float(pos), m, b};
+    std::cout << "m:" << m << " pos: " << pos << std::endl;
+    return result;
 }
 
 void alcoholdriving::LineDetector::get_line_params(std::vector<cv::Vec4i> &lines, float &m, float &b)
@@ -142,6 +135,8 @@ void alcoholdriving::LineDetector::get_line_params(std::vector<cv::Vec4i> &lines
 
     if (lines.size() == 0)
     {
+        std::cout << "OOPS! Lines are empty." << std::endl;
+
         m = 0;
         b = 0;
         return;
@@ -159,19 +154,34 @@ void alcoholdriving::LineDetector::get_line_params(std::vector<cv::Vec4i> &lines
     b = y_avg - m * x_avg;
 }
 
-float alcoholdriving::LineDetector::run()
+int alcoholdriving::LineDetector::run(cv::Mat &src, cv::Mat &output_show)
 {
-    cv::Mat dst, th_img;
-    float error=0;
-       
+    cv::Mat dst, th_img, result;
+    int cte = 90;
+
+    cv::cvtColor(src, image, cv::COLOR_RGB2BGR);
+
     preprocessing(image, dst);
     binarization(dst, th_img);
-    error = hough(th_img);
-
-    return error;
+    cte = hough(th_img, result);
+    output_show = result;
+    return cte;
 }
 
 bool alcoholdriving::LineDetector::check()
 {
     return image.cols != 640;
+}
+
+float alcoholdriving::LineDetector::getError()
+{
+    cv::Mat output_show;
+    if (check() == 1)
+        return -1;
+    int error = run(output_show, output_show);
+    cv::cvtColor(output_show, output_show, cv::COLOR_GRAY2BGR);
+    // cv::circle(output_show, cv::Point(error+320, 0), 2, cv::Scalar(255,255,255), 3);
+    // cv::imshow("output_show", output_show);
+    std::cout << error << std::endl;
+    return error;
 }

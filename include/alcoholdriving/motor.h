@@ -12,8 +12,6 @@ namespace alcoholdriving
         Motor(ros::NodeHandle &nh, const float initial_speed) : nh_(nh)
         {
             motor_pub_ = nh_.advertise<lane::xycar_motor>("xycar_motor", 1);
-
-            /* TODO Fix main */
             msg_motor_.speed = initial_speed;
         }
 
@@ -21,7 +19,7 @@ namespace alcoholdriving
 
         inline void motor_publish()
         {
-            motor_pub.publish(msg_motor_);
+            motor_pub_.publish(msg_motor_);
         }
         inline void set_motor_control(const float angle, const float speed)
         {

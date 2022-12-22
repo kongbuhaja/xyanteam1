@@ -11,7 +11,7 @@ namespace alcoholdriving
     PID(float p_gain, float i_gain, float d_gain);
 
     // Calculate PID control
-    float getControlOutput(int error, bool pd = false);
+    float getControlOutput(int error);
 
   private:
     const float p_gain_;
